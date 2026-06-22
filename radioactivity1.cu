@@ -19,11 +19,11 @@ __global__ void decay(int *alive_count, unsigned long seed)
     __shared__ int blockcount[1024]; 
     blockcount[threadIdx.x] = 0;
 
-    bool active = xcoord<ATOMS/32;
+    bool active = xcoord<ATOMS/32;      //one thread handles 32 atoms, so each xcoord will limit to ATOMS/32. Not more than that.
     curandState state;
     if (active)
     {
-        curand_init(seed, xcoord, 0, &state);           //is slow maybe? idk gemini told me(i dont trust it).
+        curand_init(seed, xcoord, 0, &state);           
     }
 
     uint32_t status = UINT32_MAX;       //Initially all the atoms are alive
@@ -31,7 +31,7 @@ __global__ void decay(int *alive_count, unsigned long seed)
     for(int t=0; t<TOTAL_TIME_STEPS; t++)
     {
         count = 0;                      // If statement messes up __syncthreads(), so we need count=0 for all other threads
-        uint32_t new_state = 0;
+        uint32_t new_state = 0;         //new_state contains the bits after the simulation.
         if (active)
         {
             for(int i=0;i<32;i++)
@@ -46,9 +46,9 @@ __global__ void decay(int *alive_count, unsigned long seed)
         status = new_state;
         count = __popc(status);
         //atomicAdd(alive_count[t],count);      //important but it locks for each thread so everything gets serealized.
-        blockcount[threadIdx.x] = count;
+        blockcount[threadIdx.x] = count;        //each thread places the number of alive atoms into its blockcount slot.
         __syncthreads();
-        for(int stride = blockDim.x/2; stride>0; stride=stride>>1)
+        for(int stride = blockDim.x/2; stride>0; stride=stride>>1)              
         {
             if(threadIdx.x < stride)
             {
@@ -58,28 +58,13 @@ __global__ void decay(int *alive_count, unsigned long seed)
         }
         if(threadIdx.x ==0)
             atomicAdd(&alive_count[t], blockcount[0]);
-        // if (threadIdx.x == 0)           // only 1 thread should write, or else things are parallelized and any thread can write in the end.
-        //     blockstorage_add[blockIdx.x] = blockcount[0];     //  not my concern here, but still better to include...
-
-        // for(int stride = gridDim.x; stride>0; stride = stride>>1)
-        // {
-        //     if (threadIdx.x < stride)
-        //     {
-        //         blockstorage_add[threadIdx.x] += blockstorage_add[threadIdx.x+stride];
-        //     }
-        // }                        
-        //TO MY CREDIT I WAS DOUBTFUL ABOUT BLOCK SYNC, SO KUDOS TO ME.
-        // if (threadIdx.x == 0)
-        // {
-        //     alive_count[t] = blockstorage[0];
-        // }
     }
     
 }
 
 int main()
 {
-    //int  h_alive_count[TOTAL_TIME_STEPS][ATOMS/32];         // THIS IS TOO BIG IDIOTTTTT. YOU KEEP FORGETTING....
+    //int  h_alive_count[TOTAL_TIME_STEPS][ATOMS/32];         
     int *d_alive_count;
 
     int *h_alive_count;

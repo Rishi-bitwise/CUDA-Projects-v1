@@ -16,7 +16,7 @@
 
 struct Params
 {
-    float *posx, *posy, *velx, *vely;         // this is only for the timestep, so dimension will be N
+    float *posx, *posy, *velx, *vely;         // this is only for a single timestep, so dimension will be N
     float *accx0, *accy0;
     float *accx1, *accy1;                     
     float *energy, *cofm;        
@@ -39,7 +39,7 @@ __global__ void simulate(Params P)
 
     for(int tile=0; tile<total_tiles; tile++)
     {
-        if (tile*tilesize + threadIdx.x < N)
+        if (tile*tilesize + threadIdx.x < N)                //note - tilesize and blocksize are the same here
         {
             s_posx[threadIdx.x] = P.posx[tile*tilesize + threadIdx.x];
             s_posy[threadIdx.x] = P.posy[tile*tilesize + threadIdx.x];
@@ -55,14 +55,14 @@ __global__ void simulate(Params P)
         
         for(int k=0; k<tilesize; k++)
         {
-            if (xid == tile*tilesize + k)
+            if (xid == tile*tilesize + k)           //ignore the particle itself.
                 continue;
-            if (tile*tilesize + k >= N)
+            if (tile*tilesize + k >= N)             //ignore particles not within the N=1024 limit
                 continue;
             dx = s_posx[k] - P.posx[xid] ;
             dy = s_posy[k] - P.posy[xid] ;
 
-            rsq = sqrtf(dx*dx + dy*dy + epsilon*epsilon) ;    // no need to be so pedantic about epsilon... maybe ?
+            rsq = sqrtf(dx*dx + dy*dy + epsilon*epsilon) ;   
             xcomp = dx/rsq;
             ycomp = dy/rsq;
 

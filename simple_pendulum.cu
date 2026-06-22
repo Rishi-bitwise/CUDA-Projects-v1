@@ -23,7 +23,7 @@ Register is used based on lifetime of a variable.
 (find the opcode and compilation nature and verifying the overlapping nature of variables)
 If variables exist and overlap then we need separate registers. 
 
-NOTE : TODO I HAVENT USED SHARED MEMORY TO SQUEEZE OUT MORE LOOPS/ COORDINATES PER THREAD. WE CAN DO THAT LATER.
+NOTE : TODO: TRACK ENERGY TO SEE IF IT DECAYS OR INCREASES. Maybe replace RK4
 
 */
 
@@ -105,13 +105,6 @@ __global__ void rk4_step(Params P)
             
             P.theta_arr_final[i*TOTAL_THREADS + xcoord] = theta;
         }
-
-        //memcpy(P.theta_arr_final[xcoord],theta_arr, sizeof(theta_arr));       
-            //massive struggle here,                                                                         
-            //had to change a lot of stuff, still sad about the time I lost here trying to fix this.
-            //memory coalescing was planned poorly :(  now its so obvious...
-
-        //UPDATE THE INIT VALS HERE !!!!
 
     }
 }
